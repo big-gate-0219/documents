@@ -25,32 +25,34 @@ atom-text-editor::shadow .cursor {
   // border-color: red;
 }
 
-body {
-  counter-reset: chapter;
-}
+.markdown-preview {
+  body {
+    counter-reset: chapter;
+  }
 
-h1::before {
-  counter-increment: chapter;
-  content: "第" counter(chapter) "章 ";
-}
+  h1::before {
+    counter-increment: chapter;
+    content: "第" counter(chapter) "章 ";
+  }
 
-h1 {
-  counter-reset: section;
-  border-left: 10px solid #CC3366;
-  border-bottom: 1px solid #CC3366;
-}
+  h1 {
+    counter-reset: section;
+    border-left: 10px solid #CC3366;
+    border-bottom: 1px solid #CC3366;
+  }
 
-h2::before {
-  counter-increment: section;
-  content: counter(chapter) "." counter(section) ". ";
-}
+  h2::before {
+    counter-increment: section;
+    content: counter(chapter) "." counter(section) ". ";
+  }
 
-h2 {
-  counter-reset: subsection;
-  border-bottom: 1px solid #CC3366;
-}
+  h2 {
+    counter-reset: subsection;
+    border-bottom: 1px solid #CC3366;
+  }
 
-h3::before {
-  counter-increment: subsection;
-  content: counter(chapter) "." counter(section) "." counter(subsection) ". ";
+  h3::before {
+    counter-increment: subsection;
+    content: counter(chapter) "." counter(section) "." counter(subsection) ". ";
+  }
 }
