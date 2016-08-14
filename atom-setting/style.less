@@ -27,31 +27,34 @@ atom-text-editor::shadow .cursor {
 
 .markdown-preview {
   body {
-    counter-reset: chapter;
-  }
-
-  h1::before {
-    counter-increment: chapter;
-    content: "第" counter(chapter) "章 ";
   }
 
   h1 {
+    counter-reset: chapter;
+  }
+
+  h2::before {
+    counter-increment: chapter;
+    content: counter(chapter) ". ";
+  }
+
+  h2 {
     counter-reset: section;
     border-left: 10px solid #CC3366;
     border-bottom: 1px solid #CC3366;
   }
 
-  h2::before {
+  h3::before {
     counter-increment: section;
     content: counter(chapter) "." counter(section) ". ";
   }
 
-  h2 {
+  h3 {
     counter-reset: subsection;
     border-bottom: 1px solid #CC3366;
   }
 
-  h3::before {
+  h4::before {
     counter-increment: subsection;
     content: counter(chapter) "." counter(section) "." counter(subsection) ". ";
   }
