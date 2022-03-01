@@ -489,11 +489,21 @@ $ docker container run
 
 <!-- header: dockerのネットワーク -->
 
+Dokcerのネットワークを操作する方法について簡単に説明します。
+コンテナやボリュームと同様にネットワークについてもDockerエンジン上で隔離された物を使用することができます。
+ここでは、Dockerをインストールした際に用意されている規定のネットワークを見てから、独自のネットワークを作ってみます。
+
 ### 規定の３つのネットワーク
 
+Dockerを導入すると以下のネットワークが用意されています。
+
 - bridge
+  - ホストの任意のポートをコンテナのポートにマップ
 - host
+  - コンテナで expose されたポートをホストでも利用できる
+  - 一つのホストで同じポートを使うコンテナは利用できない
 - none
+  - コンテナのネットワーク機能を完全に無効にします
 
 ### bridgeネットワーク
 
@@ -700,47 +710,6 @@ COPY index.html /usr/local/apache2/htdocs
 $docker build -t myimage01
 ```
 
-
-## memo
-
-```shell
-$docker container run
-    -dit
-    --name oreore-apache
-    -p 8080:80
-    -v "$PWD":/usr/local/apache2/htdocs/
-    httpd:2.4
-```
-
----
-
-図表4-2：コンテナ起動までの流れ
-docker pull
-docker create
-docker start
-docker stop
-docker rm
-docker image rm
-
-
-デタッチモードとアタッチモード
-
-docker exec -id m-apache-app /bin/bash
-
-### Dockerコンテナ作成時のオプション
-
-コンテナ作成時のオプションには下表のようなものがあります。
-
-| Option | 概要                                               |
-| :----- | :------------------------------------------------- |
-| -p     | コンテナのポートをホストにpublishする。            |
-| -v     | コンテナにボリュームをマウントする。               |
-| -rm    | コンテナが終了した時、自動的にコンテナを削除する。 |
-| -e     | コンテナの環境変数を設定する。                     |
-
-すべてのオプションについては以下を参照してください。
-<https://docs.Docker.com/engine/reference/commandline/container_create/>
-
 ### -pオプションによるポート設定
 
 ```sh
@@ -762,136 +731,3 @@ $ docker container run
 ### -pオプションによるポート設定（イメージ）
 
 ![container-port](img/container-port.drawio.svg)
-
-### -vオプションによるボリューム設定
-
-```sh
-$ docker container run
-    -dit
-    --name my-apache01
-    -p 8080:80
-    -v "$PWD":/usr/local/apache2/htdocs/
-    httpd:2.4
-
-$ docker container run
-    -dit
-    --name my-apache02
-    -p 8081:80
-    -v "$PWD":/usr/local/apache2/htdocs/
-    httpd:2.4
-```
-### ボリュームのバックアップ（概要）
-
-あああ
-
-![volume-backup](./images/volume-backup.drawio.svg)
-
-### ボリュームのバックアップ（操作）
-
-```sh
-$ docker run
-  --rm
-  -v mysqlvolume:/src
-  -v "$PWD":/dest
-  busybox tar czvf /dest/backup.tar.gz -C /src .
-```
-
-### ボリュームのリストア（概要）
-
-あああ
-
-![volume-restore](./images
-/volume-restore.drawio.svg)
-
-### ボリュームのリストア（操作）
-
-```sh
-$ docker volume create mysql-volume
-
-$ docker container run
-    --rm
-    -v mysql-volume:/dest
-    -v "$PWD":/src
-    busybox tar xzf /src/backup.tar.gz -C /dest
-```
-
-
-
-### memo-memo-memo
-
-``` shell
-docker run
-    -dit
-    --name web01
-    -p 8080:80
-    httpd:2.4
-
-docker run
-    -dit
-    --name web02
-    -p 8081:80
-    httpd:2.4
-
-docker ps
-```
-
----
-
-```shell
-$docker volume create --name mysqlvolume
-
-$docker volume ls
-
-$docker run
-    --name db01
-    -dit
-    -v mysqlvolume:/var/lib/mysql
-    -e MYSQL_ROOT_PASSWORD=mypassword
-    mysql:5.
-
-$docker ls
-```
-
----
-
-```shell
---mount type=マウントの種類,src=マウント元,dst=マウント先
-
--v /home/ubuntu/web01data:/usr/local/apache2/htdocs
---mount type=bind,src=/home/ubuntu/web01data,dst=/usr/local/apache2/htdocs
-
--v mysqlvolume:/var/lib/mysql
---mount type=volume,src=mysqlvolume,dst=/var/lib/mysql
-```
-
----
-
-```shell
---tmpfs マウント先
---mount type=tmpfs,dst=マウント先
-```
-
-### バインドマウント
-```sh
-$ cd /home/pi
-
-$ mkdir my-data01
-
-$ docker run
-    -dit
-    --name my-apl
-    -v /home/pi/my-data01:/usr/local/apache2/htdocs
-    -p 8080:80 httpd:2.4
-```
-
-### ボリュームマウント
-```shell
-$ docker volume create mysql-volume
-
-$ docker run
-    --name db01
-    -dit
-    -v mysql-volume:/var/lib/mysql
-    -e MYSQL_ROOT_PASSWORD=password
-    mysql:5.7
-```
