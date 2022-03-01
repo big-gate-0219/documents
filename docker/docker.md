@@ -507,118 +507,102 @@ Dockerを導入すると以下のネットワークが用意されています�
 
 ### bridgeネットワーク
 
-### bridge
+- 既定のネットワーク
+- ネットワークを指定せずにコンテナを起動した際に使用されます
+- ホストの任意のポートをコンテナのポートにマップできます
+- ホスト名を使った通信はできません
 
-- デフォルトで用意されているbridgeネットワークは名前を使った通信ができない
-- 既定のネットワーク。`docker run`でネットワークを指定しないと、このネットワークが使われる。
+#### bridgeネットワーク（使用例：概要図）
 
-``` shell
-$docker run -dit --name web01 -p8080:80 httpd:2.4
-$docker run -dit --name web01 -p8081:80 httpd:2.4
+![container-port](./images/bridge-network.drawio.png)
 
-$docker container inspect web01
-$docker container inspect --format="{{.NetworkSettings.IPAddress}}" web01
-
-$docker network inspect bridge
-$docker network inspect --format='{{range $host, $conf := .Containers}}{{$conf.Name}}->$conf.IPv4Address}}{{"\n"}}{{end}}' bridge
-```
-
-IPマスカレードをつかって構成されている
-
-### -pオプションによるポート設定（イメージ）
-
-![container-port](img/container-port.drawio.svg)
-
-### -pオプションによるポート設定
-
-```sh
-$ docker container run
-    -dit
-    --name my-apache01
-    -p 8080:80
-    -v "$PWD":/usr/local/apache2/htdocs/
-    httpd:2.4
-
-$ docker container run
-  -dit
-  --name my-apache02
-  -p 8081:80
-  -v "$PWD":/usr/local/apache2/htdocs/
-  httpd:2.4
-```
-### bridgeネットワーク
-
-- コンテナのネットワークは独立
-- `-p`オプションでどのコンテナと通信するのかを決める
-
-![](img/container-port.drawio.svg)
-
-### bridgeネットワーク（コンテナに割り当てられるIP）
-
-```sh
-$ docker run -dit --name web01 -p 8080:80 httpd:2.4
-$ docker run -dit --name web02 -p 8081:80 httpd:2.4
-
-$ docker container inspect web01
-[
-    {
-        "Id": "547f8f6d53f8456e28da1b163045128618596ae3e396acd4b7899966e4610f91",
-          "Path": "httpd-foreground",
-            ...
-            "Networks": {
-                "bridge": {
-                    ...
-                    "IPAddress": "172.17.0.2",
-                    ...
-        }
-    }
-]
-```
-
-### bridgeネットワーク（ネットワークに接続されているコンテナ）
-
-```sh
-$ docker run -dit --name web01 -p 8080:80 httpd:2.4
-$ docker run -dit --name web02 -p 8081:80 httpd:2.4
-```
-
-### aaa
+#### bridgeネットワーク（操作）
 
 ```shell
-$ Docker network inspect bridge
+$ docker container run
+    -d
+    -p 8080:80
+    --name nginx-server01
+     nginx
+
+$ docker container run
+    -d
+    -p 8081:80
+    --name nginx-server02
+    nginx
+
+$ docker container ls
+CONTAINER ID   IMAGE     ... STATUS          PORTS                  NAMES
+b56420d49f4c   nginx     ... Up 4 seconds    0.0.0.0:8081->80/tcp   nginx-server02
+526a7e9f1454   nginx     ... Up 13 seconds   0.0.0.0:8080->80/tcp   nginx-server01
+```
+
+#### bridgeネットワーク（確認）
+
+- `http://localhost:8080`は、`nginx-serber01`にアクセスします
+- `http://localhost:8081`は、`nginx-serber02`にアクセスします
+- `-p`オプションにて、`ホスト側のポート番号：コンテナ側のポート番号`とマッピング情報を引き渡します。
+- 詳細は省きますが、この仕組みはIPマカレード（あるいはNAT)や、IPテーブルでのポートフォーワードなどの仕組みを使って実現されています。
+
+#### bridgeネットワーク（コンテナに割り振られたIPの確認１）
+
+``` shell
+$ docker container  inspect nginx-server01
 [
-        "Name": "bridge",
-        "Containers": {
-            "547f8f6d53f8456e28da1b163045128618596ae3e396acd4b7899966e4610f91": {
-                "Name": "web01",
-                "MacAddress": "02:42:ac:11:00:02",
-                "IPv4Address": "172.17.0.2/16",
-            },
-            "42ae466d4f9e02abf4d9c89f3fe5514a82e5981187e5705df86020c9481f547f": {
-                "Name": "web02",
-                "MacAddress": "02:42:ac:11:00:03",
-                "IPv4Address": "172.17.0.3/16",
+    {
+        "Id": "526a7e9f1454...",
+        "HostConfig": {
+            "PortBindings": {
+                "80/tcp": [
+                        "HostIp": "",
+                        "HostPort": "8080"
+      ...
+      "Networks": {
+                "bridge": {
+                  "IPAddress": "172.17.0.2",
   ...
 ]
 ```
 
-### bridgeネットワークの仕組み
+#### bridgeネットワーク（コンテナに割り振られたIPの確認２）
 
-bridgeネットワークは、IPマスカレードを使って構成されています。
-`Docker run`や`Docker create`の`-p`オプションは、IPマスカレードのポート転送設定を行っています。
+```shell
+$ docker container  inspect nginx-server02
+[
+    {
+        "Id": "b56420d49f4c...",
+        "HostConfig": {
+            "PortBindings": {
+                "80/tcp": [
+                        "HostIp": "",
+                        "HostPort": "8081"
+      ...
+      "Networks": {
+                "bridge": {
+                  "IPAddress": "172.17.0.3",
+  ...
+]
+```
 
-※bridgeネットワークにIPマスカレードを使うか否かはDocker Engineの実装次第です。
 
-### bbb
+#### bridgeネットワーク（コンテナに割り振られたIPの確認３）
 
-``` shell
-$docker network ls
-$docker network create mydockernet
-$docker network ls
-$docker network inspect mydockernet
-$docker run -dit --name web01 -p 8080:80 -net mydockernet httpd:2.4
-$docker run -dit --name web02 -p 8081:80 -net mydockernet httpd:2.4
-
+```
+$ docker network inspect bridge
+[
+        "Name": "bridge",
+        "IPAM": {
+            "Driver": "default",
+            "Config": [
+                {
+                    "Gateway": "172.17.0.1"
+        "Containers": {
+          "526a7e9f1454...": {
+                "Name": "nginx-server01",
+                "IPv4Address": "172.17.0.2/16",
+          "b56420d49f...": {
+                "Name": "nginx-server02",
+                "IPv4Address": "172.17.0.3/16",
 ```
 
 ### hostネットワーク
@@ -665,6 +649,18 @@ $ docker container run
     httpd:2.4
 
 $ docker network inspect my-Docker-net
+```
+
+### bbb
+
+``` shell
+$docker network ls
+$docker network create mydockernet
+$docker network ls
+$docker network inspect mydockernet
+$docker run -dit --name web01 -p 8080:80 -net mydockernet httpd:2.4
+$docker run -dit --name web02 -p 8081:80 -net mydockernet httpd:2.4
+
 ```
 
 ### Dockerネットワークを作成した結果イメージ
