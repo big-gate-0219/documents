@@ -391,47 +391,6 @@ $ docker container run
 
 ブラウザで`http://localhost:8080`を見るとボリュームに作成したファイルが表示されます。
 
-### データボリュームコンテナ
-
-マウントするボリュームを個別ボリューム名を指定してマウントするのではなく、任意のコンテナがマウントしているディレクトリ名で指定することが出来ます。コンテナのディレクトリが、どのボリュームにマウントされているかを意識する必要がなくなります。
-
-データボリュームコンテナを使用するには、`--volumes-from`を使用します。
-
-#### データボリュームコンテナの使用例（概要図）
-
-![volume-data-volume-container](./images/volume-data-volume-container.drawio.svg)
-
-#### データボリュームコンテナの使用例（操作）
-
-```shell
-$ docker volume create nginx-volume
-
-$ docker container create
-    -v nginx-volume:/usr/share/nginx/html
-    --name nginx-volume-container
-    busybox
-
-$ docker container run
-    -rm
-    -p 8080:80
-    --volume-from nginx-volume-container
-    --name nginx-server
-    nginx
-```
-
-#### データボリュームコンテナを使ったバックアップ例（概要図）
-
-必要なディレクトリだけをマウントしただけのコンテナ（データボリュームコンテナ）を使ってのバックアップ。
-
-![volume-data-volume-backup](./images/volume-data-volume-backup.drawio.svg)
-
-
-#### データボリュームコンテナを使ったバックアップ例（操作）
-
-#### データボリュームコンテナを使ったリストア例（概要図）
-
-#### データボリュームコンテナを使ったリストア例（操作）
-
 ### mountオプションを使ったマウント
 
 ボリュームのマウントには、 `-v` オプションを使ったマウントとは別に、 `-mount` オプションを使用する方法があります。
@@ -445,6 +404,86 @@ $ docker container run
 | bind           | バインドマウント                    |
 | volume         | ボリュームマウント                  |
 | tmpfs          | tmpfsマウント（メモリへのマウント） |
+
+### データボリュームコンテナ
+
+マウントするボリュームを個別ボリューム名を指定してマウントするのではなく、任意のコンテナがマウントしているディレクトリ名で指定することが出来ます。コンテナのディレクトリが、どのボリュームにマウントされているかを意識する必要がなくなります。
+
+データボリュームコンテナを使用するには、`--volumes-from`を使用します。
+
+#### データボリュームコンテナの使用例（概要図）
+
+![volume-data-volume-container](./images/data-volume-container.drawio.png)
+
+#### データボリュームコンテナの使用例（操作）
+
+```shell
+$ docker volume ls
+DRIVER    VOLUME NAME
+local     nginx-volume
+
+$ docker container create
+    -v nginx-volume:/usr/share/nginx/html
+    --name nginx-volume-container
+    busybox
+
+$ docker container run
+    -p 8080:80
+    --volumes-from nginx-volume-container
+    --name nginx-server
+    --rm
+    nginx
+```
+
+#### データボリュームコンテナを使ったバックアップ例（概要図）
+
+![width:1100px volume-data-volume-backup](./images/data-volume-container-backup.drawio.png)
+
+
+#### データボリュームコンテナを使ったバックアップ例（操作）
+
+```shell
+$ docker container run
+    -v "$PWD":/dest
+    --volumes-from nginx-volume-container
+    --rm
+    busybox tar czvf /dest/backup.tar.gz -C /usr/share/nginx/html .
+
+$ tar -tf backup.tar.gz 
+./
+./index.html
+```
+
+#### データボリュームコンテナを使ったリストア例（概要図）
+
+![width:1100px](./images/data-volume-container-restore.drawio.png)
+#### データボリュームコンテナを使ったリストア例（操作１）
+
+```shell
+$ cat index.html 
+<html>
+    <head>
+        <title>Hello volume mount</title>
+    </head>
+    <body>
+        Hello volume mount(resore).
+    </body>
+</html>
+
+$ tar czvf backup.tar.gz -C ./src/ .
+```
+
+#### データボリュームコンテナを使ったリストア例（操作２）
+
+```shell
+$ docker container run
+    -v "$PWD":/src
+    --volumes-from nginx-volume-container
+    --rm
+    busybox tar xzf /src/backup.tar.gz -C /usr/share/nginx/html .
+```
+
+ブラウザで`http://localhost:8080`を見るとリストアしたファイルが表示されます。
 
 ## dockerのネットワーク
 
