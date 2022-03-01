@@ -507,6 +507,47 @@ Dockerを導入すると以下のネットワークが用意されています�
 
 ### bridgeネットワーク
 
+### bridge
+
+- デフォルトで用意されているbridgeネットワークは名前を使った通信ができない
+- 既定のネットワーク。`docker run`でネットワークを指定しないと、このネットワークが使われる。
+
+``` shell
+$docker run -dit --name web01 -p8080:80 httpd:2.4
+$docker run -dit --name web01 -p8081:80 httpd:2.4
+
+$docker container inspect web01
+$docker container inspect --format="{{.NetworkSettings.IPAddress}}" web01
+
+$docker network inspect bridge
+$docker network inspect --format='{{range $host, $conf := .Containers}}{{$conf.Name}}->$conf.IPv4Address}}{{"\n"}}{{end}}' bridge
+```
+
+IPマスカレードをつかって構成されている
+
+### -pオプションによるポート設定（イメージ）
+
+![container-port](img/container-port.drawio.svg)
+
+### -pオプションによるポート設定
+
+```sh
+$ docker container run
+    -dit
+    --name my-apache01
+    -p 8080:80
+    -v "$PWD":/usr/local/apache2/htdocs/
+    httpd:2.4
+
+$ docker container run
+  -dit
+  --name my-apache02
+  -p 8081:80
+  -v "$PWD":/usr/local/apache2/htdocs/
+  httpd:2.4
+```
+### bridgeネットワーク
+
 - コンテナのネットワークは独立
 - `-p`オプションでどのコンテナと通信するのかを決める
 
@@ -568,73 +609,7 @@ bridgeネットワークは、IPマスカレードを使って構成されてい
 
 ※bridgeネットワークにIPマスカレードを使うか否かはDocker Engineの実装次第です。
 
-### Dockerネットワークの作成
-
-```sh
-$ Docker network create my-Docker-net
-
-$ Docker network ls
-
-$ Docker network inspect my-Docker-net
-```
-
-### Dockerネットワークにコンテナを接続
-
-```sh
-$ Docker container run -dit --name web01 -p 8080:80 --net my-Docker-net httpd:2.4
-$ Docker container run -dit --name web02 -p 8081:80 --net my-Docker-net httpd:2.4
-$ Docker network inspect my-Docker-net
-```
-
-### Dockerネットワークを作成した結果イメージ
-
-![]()
-
-## Dockerネットワーク
-
-- デフォルトで用意されているbridgeネットワークは名前を使った通信ができない
-- 新しく作成したDokerネットワークは名前を使った通信ができる。
-  - `-net`オプションを使ってネットワークを指定した場合は、Dockerが用意するDNSに情報が登録される。
-  - `Docker network connect`で接続した場合もDockerが用意するDNSに情報が登録される。
-
-### hostネットワーク
-
-### noneネットワーク
-
-## ネットワークとコンテナの連携
-
-既定では、「bridge」「host」「none」の３種類がある。
-
-``` shell
-$docker network ls
-```
-
-### bridge
-
-既定のネットワーク。`docker run`でネットワークを指定しないと、このネットワークが使われる。
-
-``` shell
-$docker run -dit --name web01 -p8080:80 httpd:2.4
-$docker run -dit --name web01 -p8081:80 httpd:2.4
-
-$docker container inspect web01
-$docker container inspect --format="{{.NetworkSettings.IPAddress}}" web01
-
-$docker network inspect bridge
-$docker network inspect --format='{{range $host, $conf := .Containers}}{{$conf.Name}}->$conf.IPv4Address}}{{"\n"}}{{end}}' bridge
-```
-
-IPマスカレードをつかって構成されている
-
-### host
-
-IPマスカレードを使わずにコンテナがホストのIPアドレスを共有する。
-
-### none
-
-コンテナをネットワークに接続しない設定
-
-### Dockerネットワーク
+### bbb
 
 ``` shell
 $docker network ls
@@ -645,6 +620,56 @@ $docker run -dit --name web01 -p 8080:80 -net mydockernet httpd:2.4
 $docker run -dit --name web02 -p 8081:80 -net mydockernet httpd:2.4
 
 ```
+
+### hostネットワーク
+
+IPマスカレードを使わずにコンテナがホストのIPアドレスを共有する。
+
+### noneネットワーク
+
+コンテナをネットワークに接続しない設定
+### ユーザー定義ネットワーク
+
+redmineを手作業で構築する流れを書く
+
+- redmin
+- mysql
+- docker-composeで手作業で作成したのと同じものを作成する
+### Dockerネットワークの作成
+
+- 新しく作成したDokerネットワークは名前を使った通信ができる。
+
+```sh
+$ docker network create my-Docker-net
+
+$ docker network ls
+
+$ docker network inspect my-Docker-net
+```
+
+### Dockerネットワークにコンテナを接続
+
+```shell
+$ docker container run
+    -dit
+    -p 8080:80
+    --net my-Docker-net
+    --name web01
+    httpd:2.4
+
+$ docker container run
+    -dit
+    -p 8081:80
+    --net my-Docker-net
+    --name web02
+    httpd:2.4
+
+$ docker network inspect my-Docker-net
+```
+
+### Dockerネットワークを作成した結果イメージ
+
+![]()
 
 ## docker-compose
 
@@ -661,12 +686,29 @@ $docker run -dit --name web02 -p 8081:80 -net mydockernet httpd:2.4
 
 ### Docker Composeでの環境構築
 
-docker-compose.yml
+#### docker-compose.yml
+
 ```txt
-version: "3"
+version: '3.1'
 
-service:
+services:
 
+  redmine:
+    image: redmine
+    restart: always
+    ports:
+      - 8080:3000
+    environment:
+      REDMINE_DB_MYSQL: db
+      REDMINE_DB_PASSWORD: example
+      REDMINE_SECRET_KEY_BASE: supersecretkey
+
+  db:
+    image: mysql:5.7
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+      MYSQL_DATABASE: redmine
 ```
 
 ```shell
@@ -709,25 +751,3 @@ COPY index.html /usr/local/apache2/htdocs
 ```shell
 $docker build -t myimage01
 ```
-
-### -pオプションによるポート設定
-
-```sh
-$ docker container run
-    -dit
-    --name my-apache01
-    -p 8080:80
-    -v "$PWD":/usr/local/apache2/htdocs/
-    httpd:2.4
-
-$ docker container run
-  -dit
-  --name my-apache02
-  -p 8081:80
-  -v "$PWD":/usr/local/apache2/htdocs/
-  httpd:2.4
-```
-
-### -pオプションによるポート設定（イメージ）
-
-![container-port](img/container-port.drawio.svg)
