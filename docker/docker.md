@@ -705,18 +705,12 @@ $ docker network inspect redmine-network
 
 <!-- header: docker-compose -->
 
-複数のコンテナをまとめて起動したり停止したりするための仕組み。
+docker-compseとは、複数のコンテナをまとめて起動したり停止したりするための仕組みです。
 
---- redmine使えばいいかな
+ユーザー定義ネットワークで構築したRedmine環境と同じものを、docker-composeで構築してみます。
+### docker-omposeでの環境構築（定義ファイル）
 
-### Dockerコマンドでの環境構築
-
-```shell
-```
-
-### Docker Composeでの環境構築
-
-#### docker-compose.yml
+*docker-compose.yml*
 
 ```txt
 version: '3.1'
@@ -729,30 +723,77 @@ services:
     ports:
       - 8080:3000
     environment:
-      REDMINE_DB_MYSQL: db
-      REDMINE_DB_PASSWORD: example
+      REDMINE_DB_MYSQL: database
+      REDMINE_DB_PASSWORD: secret
       REDMINE_SECRET_KEY_BASE: supersecretkey
 
-  db:
+  database:
     image: mysql:5.7
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: example
+      MYSQL_ROOT_PASSWORD: secret
       MYSQL_DATABASE: redmine
 ```
 
-```shell
-$docker-compose up -d
-$docker-compose ps
-$docker ps
-$docker network ls
-$docker volume ls
+### docker-composeでの環境構築（環境構築）
 
+```shell
+$ pwd
+/.../docker/redmine
+
+$ ls
+docker-compose.yml
+
+$ docker-compose up -d
+Creating network "redmine_default" with the default driver
+Creating redmine_redmine_1  ... done
+Creating redmine_database_1 ... done
+```
+
+### docker-composeでの環境構築（状況確認）
+
+```
+$ docker-compose ps
+Name                 ... State   Ports
+--------------------------------------------------------
+redmine_database_1   ... Up      3306/tcp, 33060/tcp
+redmine_redmine_1    ... Up      0.0.0.0:8080->3000/tcp
+
+$ docker container ps
+CONTAINER ID   IMAGE       ... STATUS         PORTS                    NAMES
+65e4b2049312   mysql:5.7   ... Up 6 minutes   3306/tcp, 33060/tcp      redmine_database_1
+eed270f7c0b7   redmine     ... Up 6 minutes   0.0.0.0:8080->3000/tcp   redmine_redmine_1
+
+$ docker network ls
+NETWORK ID     NAME              DRIVER    SCOPE
+...
+4fd29d0834ee   redmine_default   bridge    local
+```
+
+### docker-composeでの環境構築（環境クリア）
+
+```
 $docker-compose down
-$docker-compose ps
-$docker ps
-$docker network ls
-$docker volume ls
+$ docker-compose down
+Stopping redmine_database_1 ... done
+Stopping redmine_redmine_1  ... done
+Removing redmine_database_1 ... done
+Removing redmine_redmine_1  ... done
+Removing network redmine_default
+
+
+$ docker-compose ps
+Name   Command   State   Ports
+------------------------------
+
+$ docker container ps
+CONTAINER ID   IMAGE       ... STATUS         PORTS                    NAMES
+
+$ docker network ls
+NETWORK ID     NAME      DRIVER    SCOPE
+4ab3c27fb94f   bridge    bridge    local
+bbf16d6760e4   host      host      local
+e148dbfb9c3c   none      null      local
 ```
 
 ## Dockerイメージの作成
