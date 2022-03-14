@@ -607,65 +607,99 @@ $ docker network inspect bridge
 
 ### hostネットワーク
 
-IPマスカレードを使わずにコンテナがホストのIPアドレスを共有する。
+hostネットワークは、Dockerホストとコンテナは同じ番号のポート番号とマッピングされます。bridgeネットワークと異なり（IPマスカレードを使わずに）コンテナがホストのIPアドレスを共有する形になります。
+
+このため、同じポート番号が公開（EXPOSE）されるコンテナを、同時に複数起動できません。先の例のnginxコンテナを同時に２つ実行できません。
 
 ### noneネットワーク
 
-コンテナをネットワークに接続しない設定
+noneネットワークは、実行するコンテナをネットワークに接続しない設定です。
 ### ユーザー定義ネットワーク
 
-redmineを手作業で構築する流れを書く
+dokcerでは、bridge,host,none以外に、ユーザー定義ネットワークを構築できます。
+ユーザー定義ネットワークでは名前を使った通信ができます。
 
-- redmin
-- mysql
-- docker-composeで手作業で作成したのと同じものを作成する
-### Dockerネットワークの作成
+ユーザー定義ネットワーク構築し、 `redmine`コンポーネントと `mysql`コンポーネントを接続させて独自環境を構築する流れを確認します。
 
-- 新しく作成したDokerネットワークは名前を使った通信ができる。
+### ユーザー定義ネットワーク（Redmine環境の概要図）
 
-```sh
-$ docker network create my-Docker-net
-
-$ docker network ls
-
-$ docker network inspect my-Docker-net
-```
-
-### Dockerネットワークにコンテナを接続
+![redmine-network](images/redmin-network.drawio.png)
+### ユーザー定義ネットワーク（ネットワークの作成）
 
 ```shell
-$ docker container run
-    -dit
-    -p 8080:80
-    --net my-Docker-net
-    --name web01
-    httpd:2.4
+$ docker network create redmine-network
+8062353493a4553d0467130286bf49892eb3f299521ce9cee6519f82a2598b4c
 
-$ docker container run
-    -dit
-    -p 8081:80
-    --net my-Docker-net
-    --name web02
-    httpd:2.4
-
-$ docker network inspect my-Docker-net
+$ docker network ls
+NETWORK ID     NAME              DRIVER    SCOPE
+4ab3c27fb94f   bridge            bridge    local
+bbf16d6760e4   host              host      local
+e148dbfb9c3c   none              null      local
+8062353493a4   redmine-network   bridge    local
 ```
 
-### bbb
+### ユーザー定義ネットワーク（mysqlコンテナの起動）
 
-``` shell
-$docker network ls
-$docker network create mydockernet
-$docker network ls
-$docker network inspect mydockernet
-$docker run -dit --name web01 -p 8080:80 -net mydockernet httpd:2.4
-$docker run -dit --name web02 -p 8081:80 -net mydockernet httpd:2.4
+```shell
+$ docker run
+    -d
+    -e MYSQL_USER=redmine
+    -e MYSQL_PASSWORD=secret
+    -e MYSQL_DATABASE=redmine
+    -e MYSQL_RANDOM_ROOT_PASSWORD=1
+    --network redmine-network
+    --name redmine-mysql
+    mysql:5.7
+
+$ docker container ps
+CONTAINER ID   IMAGE       ... STATUS          PORTS                 NAMES
+03da2e1f9a23   mysql:5.7   ... Up 49 seconds   3306/tcp, 33060/tcp   redmine-mysql
+```
+
+※mysqlのStoreDataをvolumeなどに登録すべきだがここでは割愛。
+
+### ユーザー定義ネットワーク（mysqlコンテナの起動）
+
+```shell
+$ docker run
+    -d
+    -p 8080:3000
+    -e REDMINE_DB_MYSQL=redmine-mysql
+    -e REDMINE_DB_USERNAME=redmine
+    -e REDMINE_DB_PASSWORD=secret
+    --network redmine-network
+    --name redmine-redmine
+    redmine
+
+$ docker container ps
+CONTAINER ID   IMAGE       ... PORTS                  NAMES
+442ba5367374   redmine     ... 0.0.0.0:8080->3000/tcp redmine-redmine
+03da2e1f9a23   mysql:5.7   ... 3306/tcp, 33060/tcp    redmine-mysql
 
 ```
 
-### Dockerネットワークを作成した結果イメージ
+### ユーザー定義ネットワーク（redmineの動作確認）
 
-![]()
+`http://localhost:8080`にアクセスするとredmineのトップページが表示されます。
+
+![](./images/redmine.png)
+### ユーザー定義ネットワーク（ネットワークの確認）
+
+`redmine-network`を確認すると、`redmine-mysql` と`redmine-redmine`がネットワークに接続されていることが確認できます。
+
+```
+$ docker network inspect redmine-network
+[
+        "Name": "redmine-network",
+        "Containers": {
+            "03da2e1f9a23...": {
+                "Name": "redmine-mysql",
+                ...
+            "442ba5367374...": {
+                "Name": "redmine-redmine",
+                ...
+]
+```
 
 ## docker-compose
 
