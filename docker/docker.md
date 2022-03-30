@@ -882,11 +882,38 @@ f832a43237d7   19 minutes ago   /bin/ash                                        
 
 Dockerfile
 ```txt
-FROM httpd
+FROM alpine:3.15
 
-COPY index.html /usr/local/apache2/htdocs
+COPY usr/local/hello/ /usr/local/hello
+RUN chmod 777 /usr/local/hello/hello.sh 
+
+ENTRYPOINT ["/usr/local/hello/hello.sh"]
 ```
 
 ```shell
-$docker build -t myimage01
+$ docker build -t hello-dockerfile .
+[+] Building 0.1s (7/7) FINISHED                                                                                                 
+ => [internal] load build definition from Dockerfile                                                                        0.0s
+ => => transferring dockerfile: 36B                                                                                         0.0s
+ => [internal] load .dockerignore                                                                                           0.0s
+ => => transferring context: 2B                                                                                             0.0s
+ => [internal] load metadata for docker.io/library/alpine:3.15                                                              0.0s
+ => [internal] load build context                                                                                           0.0s
+ => => transferring context: 132B                                                                                           0.0s
+ => [1/2] FROM docker.io/library/alpine:3.15                                                                                0.0s
+ => CACHED [2/2] COPY --chown=777 usr/local/hello/ /usr/local/hello                                                         0.0s
+ => exporting to image                                                                                                      0.0s
+ => => exporting layers                                                                                                     0.0s
+ => => writing image sha256:079aecd79a685c202888dce423e79c90da8b16e0b75bb268ba3d98c245a0026f                                0.0s
+ => => naming to docker.io/library/hello-dockerfile                                                                         0.0s
+
+$ docker image ls
+REPOSITORY           TAG       IMAGE ID       CREATED          SIZE
+hello-dockerfile     latest    079aecd79a68   2 minutes ago    5.57MB
+hello-docker-image   latest    f832a43237d7   45 minutes ago   5.58MB
+alpine               3.15      76c8fb57b6fc   36 hours ago     5.57MB
+redmine              latest    d869d8b6ab19   3 weeks ago      527MB
+
+docker run --rm hello-dockerfile
+Hello Dokcerfile World
 ```
