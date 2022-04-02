@@ -802,31 +802,60 @@ e148dbfb9c3c   none      null      local
 
 ### イメージの作り方
 
+Dockerのイメージを作成する方法は２つあります。
+
 1. コンテナから作る
+   - コンテナの状態をイメージにできます。
+   - コンテナを操作して、試行錯誤しながら作り込むことが出来ます
+   - CIやCDのような繰り返しイメージを作成する場合には適しません
 2. Dockerfileから作る
+   - イメージを作成するための手順をテキストファイルに記述します
+   - イメージを作成する手順をファイルで管理（バージョン管理）出来ます
+   - コンテナからイメージを作成するのに比べ慣れが必要です
+   - CIやCDのような繰り返しイメージを作成するのに適しています
 
 ### コンテナから作る
 
-```shell
-docker container run -it --name hello-docker alpine:3.15 /bin/ash
-```
+コンテナからイメージを作成するには、以下の手順を踏みます。
 
-```shell
-mkdir /usr/local/hello
+1. コンテナをアタッチ（接続した）状態で操作して、求めている環境を構築
+2. コンテナをイメージとして保存する
+3. 必要であれば、イメージをファイルに出力して他者と共有
 
-cat << EOF > /usr/local/hello/hello.sh
-#!/bin/sh
-echo Hello Dokcer World
-EOF
+手順を確認する目的で「Hello Docker World」と表示するイメージを作成します。
+### コンテナから作る（コンテナ作成）
 
-chmod 777 /usr/local/hello/hello.sh 
-/usr/local/hello/hello.sh 
+アタッチ状態で軽量なLinuxコンテナ(`alpine`)を起動します。
+コマンドを`/bin/ash`とすることで、起動したコンテナでシェルを実行できる状態にしています。
+`-i`オプションで、コンテナのSTDINにアタッチさせ、`-t`オプションで疑似ターミナルを割り当てています。
 
 ```
-ctrl + p
-ctrl + q
+$ docker container run -it --name hello-docker alpine:3.15 /bin/ash
+
+
+# mkdir /usr/local/hello
+
+# cat << EOF > /usr/local/hello/hello.sh
+> !/bin/sh
+> echo Hello Dokcer World
+>EOF
+
+# chmod 777 /usr/local/hello/hello.sh
+
+# /usr/local/hello/hello.sh
+Hello Dokcer World
+```
+
+コンテナにアタッチしている状態を解除（デタッチ）するには、`ctrl + p` `ctrl + q`とタイプします。コンテナないで`exit`コマンドを実行するとコンテナを終了させることになるのでご注意ください。
+
+### コンテナから作る（イメージの作成）
 
 ```shell
+$ docker image ls
+REPOSITORY           TAG       IMAGE ID       CREATED          SIZE
+alpine               3.15      76c8fb57b6fc   35 hours ago     5.57MB
+redmine              latest    d869d8b6ab19   3 weeks ago      527MB
+
 $ docker container commit hello-docker hello-docker-image
 
 $ docker image ls
@@ -834,31 +863,36 @@ REPOSITORY           TAG       IMAGE ID       CREATED          SIZE
 hello-docker-image   latest    763cc58ebda3   13 seconds ago   5.58MB
 alpine               3.15      76c8fb57b6fc   35 hours ago     5.57MB
 redmine              latest    d869d8b6ab19   3 weeks ago      527MB
-mysql                5.7       11d8667108c2   3 weeks ago      450MB
-busybox              latest    ec3f0931a6e6   7 weeks ago      1.24MB
-nginx                latest    c316d5a335a5   2 months ago     142MB
 
-docker container run --rm hello-docker-image /usr/local/hello/hello.sh
+$ docker container run --rm hello-docker-image /usr/local/hello/hello.sh
 Hello Dokcer World
 ```
 
+### コンテナから作る（イメージのファイル出力と読込）
+
+#### イメージのファイル出力
+
 ```shell
 docker image save hello-docker-image > hello-docker.tar
+```
 
-docker image ls
+### イメージのファイル読込
+
+```shell
+$ docker image ls
 REPOSITORY           TAG       IMAGE ID       CREATED          SIZE
 hello-docker-image   latest    f832a43237d7   11 minutes ago   5.58MB
 alpine       3.15      76c8fb57b6fc   36 hours ago   5.57MB
 redmine      latest    d869d8b6ab19   3 weeks ago    527MB
 
-docker image rm hello-docker-image
+$ docker image rm hello-docker-image
 
-docker image ls
+$ docker image ls
 REPOSITORY   TAG       IMAGE ID       CREATED        SIZE
 alpine       3.15      76c8fb57b6fc   36 hours ago   5.57MB
 redmine      latest    d869d8b6ab19   3 weeks ago    527MB
 
-$ docker load < hello-docker.tar 
+$ docker load < hello-docker.tar
 
 $ docker image ls
 REPOSITORY           TAG       IMAGE ID       CREATED          SIZE
@@ -870,15 +904,16 @@ $ docker container run --rm hello-docker-image /usr/local/hello/hello.sh
 Hello Dokcer World
 ```
 
-```shell
-$ docker image history hello-docker-image
-IMAGE          CREATED          CREATED BY                                      SIZE      COMMENT
-f832a43237d7   19 minutes ago   /bin/ash                                        171B      
-<missing>      36 hours ago     /bin/sh -c #(nop)  CMD ["/bin/sh"]              0B        
-<missing>      36 hours ago     /bin/sh -c #(nop) ADD file:3b5a33c96fd3c10d0…   5.57MB  
-```
-
 ### Dockerfileから作る
+
+Dockerfileからイメージを作成するには、以下の手順を踏みます。
+
+1. Dockerfile（テキストファイル）を記述する
+2. `docker build`でイメージを作成する
+
+手順を確認する目的で「Hello Docker World」と表示するイメージを作成します。
+
+###  Dockerfileから作る（Dockerfileの作成）
 
 Dockerfile
 ```txt
@@ -891,8 +926,23 @@ ENTRYPOINT ["/usr/local/hello/hello.sh"]
 ```
 
 ```shell
+## 環境の確認
+$ ls -p
+Dockerfile	usr/
+
+$ ls -p usr/local/hello/
+hello.sh
+
+$ cat usr/local/hello/hello.sh 
+#!/bin/sh
+echo Hello Dokcerfile World
+```
+
+###  Dockerfileから作る（イメージの作成）
+
+```shell
 $ docker build -t hello-dockerfile .
-[+] Building 0.1s (7/7) FINISHED                                                                                                 
+[+] Building 0.1s (7/7) FINISHED
  => [internal] load build definition from Dockerfile                                                                        0.0s
  => => transferring dockerfile: 36B                                                                                         0.0s
  => [internal] load .dockerignore                                                                                           0.0s
@@ -910,7 +960,6 @@ $ docker build -t hello-dockerfile .
 $ docker image ls
 REPOSITORY           TAG       IMAGE ID       CREATED          SIZE
 hello-dockerfile     latest    079aecd79a68   2 minutes ago    5.57MB
-hello-docker-image   latest    f832a43237d7   45 minutes ago   5.58MB
 alpine               3.15      76c8fb57b6fc   36 hours ago     5.57MB
 redmine              latest    d869d8b6ab19   3 weeks ago      527MB
 
